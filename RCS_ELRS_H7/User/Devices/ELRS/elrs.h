@@ -1,10 +1,24 @@
-#ifndef __ELRS_H__
-#define __ELRS_H__
+/**
+ * @file elrs.c
+ * @brief ELRS解析算法的STM32F4适配
+ * @author Hesui1
+ */
+
+#pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* 头文件引入 -------------------------------------------------------------------*/
+
 #include "main.h"
 #include <string.h>
 
+/* 配置宏定义 -------------------------------------------------------------------*/
 
 #define MAX_FRAME_SIZE 32 // 空闲中断接收的最大帧长
+
+/* 导出宏定义 -------------------------------------------------------------------*/
 
 /*
 https://github.com/crsf-wg/crsf/wiki/Packet-Types CRSF协议定义
@@ -69,6 +83,8 @@ https://github.com/crsf-wg/crsf/wiki/Packet-Types CRSF协议定义
 #define CHANNELS_Frame_Length 0x18 // 通道帧长度
 #define LINK_Frame_Length 0x0C     // 连接帧长度
 
+/* 导出类型定义 -------------------------------------------------------------------*/
+
 typedef struct
 {
     // CRSF_FRAMETYPE_RC_CHANNELS_PACKED  遥控器通道打包帧类型
@@ -103,7 +119,14 @@ typedef struct
 
 } ELRS_Data;
 
+/* 导出函数声明 -------------------------------------------------------------------*/
+
 void ELRS_Init(void);
+ELRS_Data ELRS_Get(void);
 void ELRS_UARTE_RxCallback(uint16_t Size);
+
+
+#ifdef __cplusplus
+}
 #endif
 

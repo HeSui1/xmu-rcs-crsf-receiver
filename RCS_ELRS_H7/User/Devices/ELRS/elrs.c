@@ -1,8 +1,35 @@
+/**
+ * @file elrs.c
+ * @brief ELRS解析算法的STM32H7适配
+ * @author Hesui1
+ */
+
+/* 头文件引入 -------------------------------------------------------------------*/
+
 #include "elrs.h"
 #include "usart.h"
 
+/* 全局变量声明 -----------------------------------------------------------------*/
 
-float float_Map(float input_value, float input_min, float input_max, float output_min, float output_max)
+extern DMA_HandleTypeDef hdma_usart10_rx;
+uint8_t elrs_data_temp[MAX_FRAME_SIZE] = {0};
+ELRS_Data elrs_data;
+
+
+/* 静态函数定义 -----------------------------------------------------------------*/
+
+/**
+ * @brief 比值缩放
+ * @details 可以用于将摇杆数据映射到操作数据上
+ * 
+ * @param input_value 输入的数据
+ * @param input_min   输入数据的取值范围
+ * @param input_max   输入数据的取值范围
+ * @param output_min  输出数据的取值范围
+ * @param output_max  输出数据的取值范围
+ * @return 输出的数据
+ */
+static float float_Map(float input_value, float input_min, float input_max, float output_min, float output_max)
 {
     float output_value;
     if (input_value < input_min)
@@ -19,7 +46,25 @@ float float_Map(float input_value, float input_min, float input_max, float outpu
     }
     return output_value;
 }
-float float_Map_with_median(float input_value, float input_min, float input_max, float median, float output_min, float output_max)
+
+/**
+ * @brief 映射一个浮点值到指定输出区间（带中值控制的分段线性映射）。
+ *
+ * 该函数将输入值 `input_value` 从输入区间 `[input_min, input_max]` 映射到输出区间 `[output_min, output_max]`。
+ * 映射过程中以指定的中值 `median` 为分界点，将输入区间分为 `[input_min, median]` 和 `[median, input_max]` 两段，
+ * 分别线性映射到 `[output_min, output_median]` 和 `[output_median, output_max]`，其中 `output_median` 为输出区间的中值。
+ *
+ * 若参数非法（如输入区间或输出区间无效，或 median 不在输入区间内），将返回 `output_min`。
+ *
+ * @param input_value   要映射的输入值。
+ * @param input_min     输入区间的下限。
+ * @param input_max     输入区间的上限。
+ * @param median        输入区间的中值，用作映射的分界点，必须满足 input_min < median < input_max。
+ * @param output_min    输出区间的下限。
+ * @param output_max    输出区间的上限。
+ * @return              映射后的输出值，或在参数非法时返回 output_min。
+ */
+static float_Map_with_median(float input_value, float input_min, float input_max, float median, float output_min, float output_max)
 {
     float output_median = (output_max - output_min) / 2 + output_min;
     if (input_min >= input_max || output_min >= output_max || median <= input_min || median >= input_max)
@@ -37,9 +82,11 @@ float float_Map_with_median(float input_value, float input_min, float input_max,
     }
 }
 
-extern DMA_HandleTypeDef hdma_usart10_rx;
+/* 导出函数定义 -----------------------------------------------------------------*/
 
-uint8_t elrs_data_temp[MAX_FRAME_SIZE] = {0};
+/**
+ * @brief 初始化ELRS协议到UART串口
+ */
 void ELRS_Init(void)
 {
 
@@ -48,7 +95,20 @@ void ELRS_Init(void)
 
 }
 
-ELRS_Data elrs_data;
+/**
+ * @brief 获取ELRS解析出的数据
+ */
+ELRS_Data ELRS_Get(void)
+{
+    return elrs_data;
+}
+
+/**
+ * @brief ELRS协议的回调解析函数
+ * @param Size 本次回调发生时，接收了多少个数据
+ * 
+ * @note 请在HAL_UARTEx_RxEventCallback回调函数中调用
+ */
 void ELRS_UARTE_RxCallback(uint16_t Size)
 {
 
